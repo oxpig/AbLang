@@ -1,8 +1,9 @@
-import os, json, argparse, string
+import os, json, argparse, string, subprocess
 from dataclasses import dataclass
 
 import numpy as np
 import torch
+import requests
 
 from . import tokenizers, model
 
@@ -17,8 +18,20 @@ class pretrained:
         
         if model_folder == "download":
             # Download model to specific place - if already downloaded use it without downloading again
-            ## model_folder = downloaded files
-            pass
+            model_folder = os.path.join(os.path.dirname(__file__), "model-weights-{}".format(chain))
+            os.makedirs(model_folder, exist_ok = True)
+            
+            if not os.path.isfile(os.path.join(model_folder, "amodel.pt")):
+                print("Downloading model ...")
+                
+                url = "http://opig.stats.ox.ac.uk/website/data/downloads/ablang-{}.tar.gz".format(chain)
+                tmp_file = os.path.join(model_folder, "tmp.tar.gz")
+
+                with open(tmp_file,'wb') as f: f.write(requests.get(url).content)
+                
+                subprocess.run(["tar", "-zxvf", tmp_file, "-C", model_folder], check = True) 
+                
+                os.remove(tmp_file)
 
         self.hparams_file = os.path.join(model_folder, 'hparams.json')
         self.model_file = os.path.join(model_folder, 'amodel.pt')
@@ -53,16 +66,19 @@ class pretrained:
 
         for sequence_part in [sequence[x:x+splitSize] for x in range(0, len(sequence), splitSize)]:
             
-            aList = aList + [getattr(self, mode)(sequence_part, align)]                
+            aList.append(getattr(self, mode)(sequence_part, align))
         
         if mode == 'rescoding':
-            return aList[0]
+            if align==True:
+                return aList
+            
+            return sum(aList, [])
         
         return np.concatenate(aList)
     
     def seqcoding(self, seqs, align=False):
         """
-        Predicts the embeddings per residues and then runs the res_to_seq function for each sequence to achieve a fixed length embedding per sequence.
+        Sequence specific representations
         """
         
         tokens = self.tokenizer(seqs, pad=True)
@@ -111,6 +127,9 @@ class pretrained:
         return predictions.detach().numpy()
     
     def rescoding(self, seqs, align=False):
+        """
+        Residue specific representations.
+        """
            
         if align:
             
