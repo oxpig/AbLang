@@ -2,33 +2,36 @@ import os, json, argparse, string
 from dataclasses import dataclass
 
 import numpy as np
-import pandas as pd
 import torch
-import anarci
 
-from . import tokenizers, ablang
+from . import tokenizers, model
 
 
-class init_model():
+class pretrained:
     """
-    Initializes the model.    
+    Initializes AbLang for heavy or light chains.    
     """
     
-    def __init__(self, model_dir, random_init=False):
+    def __init__(self, chain="heavy", model_folder="download", random_init=False):
         super().__init__()
         
-        with open(os.path.join(model_dir, 'hparams.json'), 'r', encoding='utf-8') as f:
+        if model_folder == "download":
+            # Download model to specific place - if already downloaded use it without downloading again
+            ## model_folder = downloaded files
+            pass
+
+        self.hparams_file = os.path.join(model_folder, 'hparams.json')
+        self.model_file = os.path.join(model_folder, 'amodel.pt')
+        
+        with open(self.hparams_file, 'r', encoding='utf-8') as f:
             self.hparams = argparse.Namespace(**json.load(f))    
-        
-        self.model_file = os.path.join(model_dir, 'amodel.pt')
-        
-        self.init_model = ablang.AbLang(self.hparams)
-        self.AbLang = ablang.AbLang(self.hparams)
+
+        self.AbLang = model.AbLang(self.hparams)
         
         if not random_init:
             self.AbLang.load_state_dict(torch.load(self.model_file, map_location=torch.device('cpu')))
         
-        self.tokenizer = tokenizers.ABtokenizer(os.path.join(model_dir, 'vocab.json'))
+        self.tokenizer = tokenizers.ABtokenizer(os.path.join(model_folder, 'vocab.json'))
         self.AbRep = self.AbLang.AbRep
         
     def freeze(self):
@@ -37,39 +40,27 @@ class init_model():
     def unfreeze(self):
         self.AbLang.train()
         
-    def __call__(self, sequence, mode='sequence', align=False):
+    def __call__(self, sequence, mode='seqcoding', align=False, splitSize=50):
         """
-        Mode: sequence, residues, reconstruct or mutations.
+        Mode: sequence, residue, restore or likelihood.
         """
+        if not mode in ['rescoding', 'seqcoding', 'restore', 'likelihood']:
+            raise SyntaxError("Given mode doesn't exist.")
         
         if isinstance(sequence, str): sequence = [sequence]
         
         aList = []
-        splitedSize=50 # THIS IS BASED ON RAM AVAILABLE - HIGHER IS FASTER, BUT IT USES MORE RAM
 
-        for sequence_part in [sequence[x:x+splitedSize] for x in range(0, len(sequence), splitedSize)]:
+        for sequence_part in [sequence[x:x+splitSize] for x in range(0, len(sequence), splitSize)]:
             
-            if mode=='sequence': 
-                aList = aList + [self.sequence(sequence_part)]
-            
-            elif mode=='reconstruct': 
-                aList = aList + [self.reconstruct(sequence_part)]
-                
-            elif mode=='residues': 
-                aList = aList + [self.residues(sequence_part, align=align)]
-                
-            elif mode=='mutations': 
-                aList = aList + [self.mutations(sequence_part)]
-
-            else:
-                raise SyntaxError("Given mode doesn't exist.")
+            aList = aList + [getattr(self, mode)(sequence_part, align)]                
         
-        if mode == 'residues':
-            return aList
+        if mode == 'rescoding':
+            return aList[0]
         
         return np.concatenate(aList)
     
-    def sequence(self, seqs):
+    def seqcoding(self, seqs, align=False):
         """
         Predicts the embeddings per residues and then runs the res_to_seq function for each sequence to achieve a fixed length embedding per sequence.
         """
@@ -91,9 +82,9 @@ class init_model():
         
         return seq_codings
     
-    def reconstruct(self, seqs):
+    def restore(self, seqs, align=False):
         """
-        Reconstruct sequences
+        Restore sequences
         """
         
         tokens = self.tokenizer(seqs, pad=True)
@@ -102,11 +93,13 @@ class init_model():
 
         predicted_tokens = torch.max(predictions, -1).indices + 1
 
-        reconstructed_seqs = self.tokenizer(predicted_tokens, encode=False)
+        restored_tokens = torch.where(tokens==23, predicted_tokens, tokens)
+
+        restored_seqs = self.tokenizer(restored_tokens, encode=False)
         
-        return np.array([res_to_seq(seq, 'reconstruct') for seq in np.c_[reconstructed_seqs, np.vectorize(len)(seqs)]])
+        return np.array([res_to_seq(seq, 'reconstruct') for seq in np.c_[restored_seqs, np.vectorize(len)(seqs)]])
     
-    def mutations(self, seqs):
+    def likelihood(self, seqs, align=False):
         """
         Possible Mutations
         """
@@ -117,9 +110,13 @@ class init_model():
         
         return predictions.detach().numpy()
     
-    def residues(self, seqs, align=False):
+    def rescoding(self, seqs, align=False):
            
         if align:
+            
+            import pandas as pd
+            import anarci
+            
             anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=7, scheme='imgt')
             number_alignment = get_number_alignment(anarci_out)
             
@@ -181,6 +178,8 @@ def get_number_alignment(oanarci):
     Creates a number alignment from the anarci results.
     """
     
+    import pandas as pd
+    
     alist = []
     
     for aligned_seq in oanarci[1]:
@@ -195,6 +194,8 @@ def get_max_alignment():
     """
     Create maximum possible alignment for sorting
     """
+    
+    import pandas as pd
 
     sortlist = []
 
@@ -214,6 +215,8 @@ def get_max_alignment():
     return pd.DataFrame(sortlist)
 
 def create_alignment(res_embeds, oanarci, seq, number_alignment):
+    
+    import pandas as pd
 
     datadf = pd.DataFrame(oanarci[0][0])
 
