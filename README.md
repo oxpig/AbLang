@@ -1,6 +1,6 @@
 # **AbLang: A language model for antibodies**
 
-AbLang allows users to explore 
+General protein language models have been shown to summarise the semantics of protein sequences into representations that are useful for state-of-the-art predictive methods. However, for antibody specific problems, such as restoring residues lost due to sequencing errors, a model trained solely on antibodies may be more powerful. Language models require vast numbers of sequences for training and antibodies are one of the few protein types for which such volumes of data exist, for example in the Observed Antibody Space (OAS) database. Here, we introduce AbLang, a language model trained on the antibody sequences in the OAS database. We demonstrate the power of AbLang by using it to restore missing residues in antibody sequence data, a key issue with BCR-seq data, as seen with over 40% of OAS sequences missing the first 15 amino acids. AbLang restores the missing residues of antibody sequences better than using IMGT germlines or the general protein language model ESM-1b. Further, AbLang does not require knowledge of the germline of the antibody and is seven times faster than ESM-1b.
 
 -----------
 
@@ -35,9 +35,12 @@ Currently, AbLang can be used to generate three different representations/encodi
 
 These representations can be used for a plethora of antibody design applications. As an example, we have used the res-likelihoods from AbLang to restore missing residues in antibody sequences due either to sequencing errors, such as ambiguous bases, or the limitations of the sequencing techniques used.
 
-Restoration of antibody sequences can be done like this:
 
-`python
+## Antibody sequence restoration
+
+Restoration of antibody sequences can be done using the "restore" mode as seen below.
+
+```{r, engine='python', count_lines}
 
 import ablang
 
@@ -47,12 +50,14 @@ heavy_ablang.freeze()
 
 seqs = [
     'EV*LVESGPGLVQPGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNKYYADSVKGRFTISRDNSKNTLYLQMSSLRAEDTAVFYCAKVKFYDPTAPNDYWGQGTLVTVSS',
-    '*************PGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNK*YADSVKGRFTISRDNSKNTLYLQMSSLRAEDTAVFYCAKVKFYDPTAPNDYWGQGTLVT***',
+    '*************PGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNK*YADSVKGRFTISRDNSKNTLYLQMSSLRAEDTAVFYCAKVKFYDPTAPNDYWGQGTL*****',
 ]
 
 heavy_ablang(seqs, mode='restore')
 
-`
+```
+
+The output of the above is seen below.
 
 ```console
 array(['EVQLVESGPGLVQPGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNKYYADSVKGRFTISRDNSKNTLYLQMSSLRAEDTAVFYCAKVKFYDPTAPNDYWGQGTLVTVSS',
@@ -60,7 +65,7 @@ array(['EVQLVESGPGLVQPGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNKYYADSVKGRFTISR
       dtype='<U121')
 ```
 
-
+-----
 
 # Citing this work
 
