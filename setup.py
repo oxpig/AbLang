@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     
 setup(
     name='ablang',
-    version='1.0.1',
+    version='0.1.1',
     description='AbLang: A language model for antibodies.',
     license='BSD 3-clause license',
     maintainer='Tobias Hegelund Olsen',
