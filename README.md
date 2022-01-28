@@ -41,7 +41,6 @@ These representations can be used for a plethora of antibody design applications
 Restoration of antibody sequences can be done using the "restore" mode as seen below.
 
 ```{r, engine='python', count_lines}
-
 import ablang
 
 heavy_ablang = ablang.pretrained("heavy") # Use "light" if you are working with light chains
@@ -64,7 +63,6 @@ array(['EVQLVESGPGLVQPGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNKYYADSVKGRFTISR
        'QVQLVESGGGVVQPGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNKYYADSVKGRFTISRDNSKNTLYLQMSSLRAEDTAVFYCAKVKFYDPTAPNDYWGQGTLVTVSS'],
       dtype='<U121')
 ```
-
 -----
 
 # Citing this work

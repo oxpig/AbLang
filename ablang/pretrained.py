@@ -103,6 +103,55 @@ class pretrained:
         Restore sequences
         """
         
+        if align:
+            """
+            Figures out how many residues are missing in an antibody.
+            DISCLAIMER: Not thoroughly tested yet
+            """
+            import pandas as pd
+            import anarci
+            
+            spread = 5
+            
+            def get_sequence_from_anarci(o_anarci):
+                """
+                Ensures correct masking on each side of sequence
+                """
+                
+                seq = []
+                
+                start_pad = 0
+                for num, res in o_anarci[0][0]:
+                    if res == '-' and (num[0]==start_pad+1):
+                        start_pad += 1
+                    
+                    seq.append(res)
+                    
+                seq = ''.join(seq).replace('-','') + '*'*(128-num[0])
+                
+                spread_seqs = []
+                
+                spread_seqs.append('*'*start_pad+seq)
+                for diff in range(1, spread+1):
+                    spread_seqs.append('*'*(start_pad-diff)+seq)
+                    spread_seqs.append('*'*(start_pad+diff)+seq)
+                    
+                return spread_seqs
+            
+            anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=7, scheme='imgt')
+            
+            spread_seqs = np.array([get_sequence_from_anarci(o_anarci) for o_anarci in anarci_out[1]])
+            
+            seqs = []
+            for spread_seq in spread_seqs:
+                tokens = self.tokenizer(spread_seq, pad=True)
+
+                predictions = self.AbLang(tokens)[:,:,1:21]
+                best_seq_idx = torch.max(torch.max(predictions, -1).values.mean(1), -1).indices
+                
+                seqs.append(spread_seq[best_seq_idx])
+
+        
         tokens = self.tokenizer(seqs, pad=True)
         
         predictions = self.AbLang(tokens)[:,:,1:21]
