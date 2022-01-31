@@ -35,6 +35,7 @@ class pretrained:
 
         self.hparams_file = os.path.join(model_folder, 'hparams.json')
         self.model_file = os.path.join(model_folder, 'amodel.pt')
+        self.chain = chain
         
         with open(self.hparams_file, 'r', encoding='utf-8') as f:
             self.hparams = argparse.Namespace(**json.load(f))    
@@ -112,8 +113,14 @@ class pretrained:
             import anarci
             
             spread = 5
+            if self.chain == 'heavy':
+                max_position = 128
+            else:
+                max_position = 127
             
-            def get_sequence_from_anarci(o_anarci):
+            
+            
+            def get_sequence_from_anarci(o_anarci, max_position):
                 """
                 Ensures correct masking on each side of sequence
                 """
@@ -127,7 +134,7 @@ class pretrained:
                     
                     seq.append(res)
                     
-                seq = ''.join(seq).replace('-','') + '*'*(128-num[0])
+                seq = ''.join(seq).replace('-','') + '*'*(max_position-num[0])
                 
                 spread_seqs = []
                 
@@ -140,7 +147,7 @@ class pretrained:
             
             anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=7, scheme='imgt')
             
-            spread_seqs = np.array([get_sequence_from_anarci(o_anarci) for o_anarci in anarci_out[1]])
+            spread_seqs = np.array([get_sequence_from_anarci(o_anarci, max_position) for o_anarci in anarci_out[1]])
             
             seqs = []
             for spread_seq in spread_seqs:
