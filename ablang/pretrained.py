@@ -52,7 +52,7 @@ class pretrained:
         self.AbRep = self.AbLang.AbRep
         
         self.ncpu = ncpu
-        self.spread = 9 # Based on get_spread_sequences function
+        self.spread = 10 # Based on get_spread_sequences function
         if chain == 'heavy':
             self.max_position = 128
         else:
@@ -317,7 +317,7 @@ def get_spread_sequences(seq, spread, start_position, numbaList):
     Test sequences which are 8 positions shorter (position 10 + max CDR1 gap of 7) up to 2 positions longer (possible insertions).
     """
 
-    for diff in range(start_position-7, start_position+1+1):
+    for diff in range(start_position-7, start_position+2+1):
         numbaList.append('*'*diff+seq)
     
     return numbaList
@@ -329,7 +329,7 @@ def get_sequences_from_anarci(out_anarci, max_position, spread):
     
     end_position = int(re.search(r'\d+', out_anarci[::-1]).group()[::-1])
     # Fixes ANARCI error of poor numbering of the CDR1 region
-    start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+',
+    start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+',
                                    out_anarci).group().split(',')[0]) - 1
     
     sequence = "".join(re.findall(r"(?i)[A-Z*]", "".join(re.findall(r'\),\s\'[A-Z*]', out_anarci))))
