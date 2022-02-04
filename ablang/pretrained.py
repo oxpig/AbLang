@@ -1,5 +1,9 @@
-import os, json, argparse, string, subprocess
+import os, json, argparse, string, subprocess, re
 from dataclasses import dataclass
+
+from numba import jit
+from numba.typed import Dict, List
+from numba.types import unicode_type, DictType
 
 import numpy as np
 import torch
@@ -13,11 +17,11 @@ class pretrained:
     Initializes AbLang for heavy or light chains.    
     """
     
-    def __init__(self, chain="heavy", model_folder="download", random_init=False):
+    def __init__(self, chain="heavy", model_folder="download", random_init=False, ncpu=7):
         super().__init__()
         
         if model_folder == "download":
-            # Download model to specific place - if already downloaded use it without downloading again
+            # Download model and save to specific place - if already downloaded do not download again
             model_folder = os.path.join(os.path.dirname(__file__), "model-weights-{}".format(chain))
             os.makedirs(model_folder, exist_ok = True)
             
@@ -35,7 +39,6 @@ class pretrained:
 
         self.hparams_file = os.path.join(model_folder, 'hparams.json')
         self.model_file = os.path.join(model_folder, 'amodel.pt')
-        self.chain = chain
         
         with open(self.hparams_file, 'r', encoding='utf-8') as f:
             self.hparams = argparse.Namespace(**json.load(f))    
@@ -47,6 +50,14 @@ class pretrained:
         
         self.tokenizer = tokenizers.ABtokenizer(os.path.join(model_folder, 'vocab.json'))
         self.AbRep = self.AbLang.AbRep
+        
+        self.ncpu = ncpu
+        self.spread = 9 # Based on get_spread_sequences function
+        if chain == 'heavy':
+            self.max_position = 128
+        else:
+            self.max_position = 127
+        
         
     def freeze(self):
         self.AbLang.eval()
@@ -63,10 +74,13 @@ class pretrained:
         
         if isinstance(sequence, str): sequence = [sequence]
         
+        
+        if align and mode=='restore':
+            sequence = self.sequence_aligning(sequence)
+            splitSize = ((splitSize//self.spread)+1)*self.spread
+        
         aList = []
-
         for sequence_part in [sequence[x:x+splitSize] for x in range(0, len(sequence), splitSize)]:
-            
             aList.append(getattr(self, mode)(sequence_part, align))
         
         if mode == 'rescoding':
@@ -103,72 +117,36 @@ class pretrained:
         """
         Restore sequences
         """
-        
+
         if align:
-            """
-            Figures out how many residues are missing in an antibody.
-            DISCLAIMER: Not thoroughly tested yet
-            """
-            import pandas as pd
-            import anarci
-            
-            spread = 5
-            if self.chain == 'heavy':
-                max_position = 128
-            else:
-                max_position = 127
-            
-            
-            
-            def get_sequence_from_anarci(o_anarci, max_position):
-                """
-                Ensures correct masking on each side of sequence
-                """
-                
-                seq = []
-                
-                start_pad = 0
-                for num, res in o_anarci[0][0]:
-                    if res == '-' and (num[0]==start_pad+1):
-                        start_pad += 1
-                    
-                    seq.append(res)
-                    
-                seq = ''.join(seq).replace('-','') + '*'*(max_position-num[0])
-                
-                spread_seqs = []
-                
-                spread_seqs.append('*'*start_pad+seq)
-                for diff in range(1, spread+1):
-                    spread_seqs.append('*'*(start_pad-diff)+seq)
-                    spread_seqs.append('*'*(start_pad+diff)+seq)
-                    
-                return spread_seqs
-            
-            anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=7, scheme='imgt')
-            
-            spread_seqs = np.array([get_sequence_from_anarci(o_anarci, max_position) for o_anarci in anarci_out[1]])
-            
-            seqs = []
-            for spread_seq in spread_seqs:
-                tokens = self.tokenizer(spread_seq, pad=True)
+            nr_seqs = len(seqs)//self.spread
 
-                predictions = self.AbLang(tokens)[:,:,1:21]
-                best_seq_idx = torch.max(torch.max(predictions, -1).values.mean(1), -1).indices
-                
-                seqs.append(spread_seq[best_seq_idx])
+            tokens = self.tokenizer(seqs, pad=True)
+            predictions = self.AbLang(tokens)[:,:,1:21]
 
-        
-        tokens = self.tokenizer(seqs, pad=True)
-        
-        predictions = self.AbLang(tokens)[:,:,1:21]
+            # Reshape
+            tokens = tokens.reshape(nr_seqs, self.spread, -1)
+            predictions = predictions.reshape(nr_seqs, self.spread, -1, 20)
+            seqs = seqs.reshape(nr_seqs, -1)
+            
+            # Find index of best predictions
+            best_seq_idx = torch.argmax(torch.max(predictions, -1).values.mean(2), -1)
+            
+            # Select best predictions           
+            tokens = tokens.gather(1, best_seq_idx.view(-1, 1).unsqueeze(1).repeat(1, 1, tokens.shape[-1])).squeeze(1)
+            predictions = predictions[range(predictions.shape[0]), best_seq_idx]
+            seqs = np.take_along_axis(seqs, best_seq_idx.view(-1, 1).numpy(), axis=1)
+
+
+        else:
+            tokens = self.tokenizer(seqs, pad=True)
+            predictions = self.AbLang(tokens)[:,:,1:21]
 
         predicted_tokens = torch.max(predictions, -1).indices + 1
-
         restored_tokens = torch.where(tokens==23, predicted_tokens, tokens)
 
         restored_seqs = self.tokenizer(restored_tokens, encode=False)
-        
+
         return np.array([res_to_seq(seq, 'reconstruct') for seq in np.c_[restored_seqs, np.vectorize(len)(seqs)]])
     
     def likelihood(self, seqs, align=False):
@@ -217,8 +195,26 @@ class pretrained:
             residue_output = [res_to_list(state, seq) for state, seq in zip(residue_states, seqs)]
 
             return residue_output
+        
+    def sequence_aligning(self, seqs):
+        
+        import pandas as pd
+        import anarci
 
-    
+        anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, allowed_species=['human', 'mouse'], scheme='imgt')
+        anarci_data = pd.DataFrame([str(anarci[0][0]) for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
+
+        seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
+                                                                     self.max_position, 
+                                                                     self.spread), axis=1, result_type='expand').to_numpy().reshape(-1)
+
+        
+        return seqs
+        
+        
+            
+            
+
 @dataclass
 class output():
     """
@@ -289,6 +285,7 @@ def get_max_alignment():
                 
     return pd.DataFrame(sortlist)
 
+
 def create_alignment(res_embeds, oanarci, seq, number_alignment):
     
     import pandas as pd
@@ -304,3 +301,45 @@ def create_alignment(res_embeds, oanarci, seq, number_alignment):
     aligned_embeds = pd.DataFrame(np.insert(res_embeds[1:1+len(seq)], idxs , 0, axis=0))
 
     return pd.concat([aligned_embeds, sequence_alignment], axis=1).values
+
+def turn_into_numba(anarcis):
+    """
+    Turns the nested anarci dictionary into a numba item, allowing us to use numba on it.
+    """
+    
+    anarci_list = List.empty_list(unicode_type)
+    [anarci_list.append(str(anarci)) for anarci in anarcis]
+
+    return anarci_list
+
+@jit(nopython=True)
+def get_spread_sequences(seq, spread, start_position, numbaList):
+    """
+    Test sequences which are 8 positions shorter (position 10 + max CDR1 gap of 7) up to 2 positions longer (possible insertions).
+    """
+
+    for diff in range(start_position-7, start_position+1+1):
+        numbaList.append('*'*diff+seq)
+    
+    return numbaList
+
+def get_sequences_from_anarci(out_anarci, max_position, spread):
+    """
+    Ensures correct masking on each side of sequence
+    """
+    
+    end_position = int(re.search(r'\d+', out_anarci[::-1]).group()[::-1])
+   
+    start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'', out_anarci).group().split(',')[0]) - 1
+    
+    sequence = "".join(re.findall(r"(?i)[A-Z*]", "".join(re.findall(r'\),\s\'[A-Z*]', out_anarci))))
+
+    sequence_j = ''.join(sequence).replace('-','') + '*'*(max_position-int(end_position))
+    
+    numba_list = List.empty_list(unicode_type)
+
+    spread_seqs = np.array(get_spread_sequences(sequence_j, spread, start_position, numba_list))
+
+    return spread_seqs
+
+
