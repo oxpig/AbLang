@@ -207,7 +207,6 @@ class pretrained:
         seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
                                                                      self.max_position, 
                                                                      self.spread), axis=1, result_type='expand').to_numpy().reshape(-1)
-
         
         return seqs
         
@@ -329,8 +328,9 @@ def get_sequences_from_anarci(out_anarci, max_position, spread):
     """
     
     end_position = int(re.search(r'\d+', out_anarci[::-1]).group()[::-1])
-   
-    start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'', out_anarci).group().split(',')[0]) - 1
+    # Fixes ANARCI error of poor numbering of the CDR1 region
+    start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+',
+                                   out_anarci).group().split(',')[0]) - 1
     
     sequence = "".join(re.findall(r"(?i)[A-Z*]", "".join(re.findall(r'\),\s\'[A-Z*]', out_anarci))))
 
