@@ -202,7 +202,7 @@ class pretrained:
         import anarci
 
         anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, allowed_species=['human', 'mouse'], scheme='imgt')
-        anarci_data = pd.DataFrame([str(anarci[0][0]) for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
+        anarci_data = pd.DataFrame([str(anarci[0][0]) if anarci else 'ANARCI_error' for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
 
         seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
                                                                      self.max_position, 
@@ -326,6 +326,9 @@ def get_sequences_from_anarci(out_anarci, max_position, spread):
     """
     Ensures correct masking on each side of sequence
     """
+    
+    if out_anarci == 'ANARCI_error':
+        return np.array(['ANARCI-ERR']*spread)
     
     end_position = int(re.search(r'\d+', out_anarci[::-1]).group()[::-1])
     # Fixes ANARCI error of poor numbering of the CDR1 region
