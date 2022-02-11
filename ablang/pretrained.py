@@ -156,9 +156,9 @@ class pretrained:
         
         tokens = self.tokenizer(seqs, pad=True)
         
-        predictions = self.AbLang(tokens)
+        predictions = self.AbLang(tokens)[:,:,1:21]
         
-        return torch.nn.Softmax(dim=-1)(predictions)[:,:,1:21].detach().numpy()
+        return predictions.detach().numpy()
     
     def rescoding(self, seqs, align=False):
         """

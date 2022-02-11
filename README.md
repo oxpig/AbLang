@@ -1,4 +1,14 @@
-# **AbLang: A language model for antibodies**
+
+---
+
+<div align="center">    
+ 
+# AbLang: A language model for antibodies  
+
+[![Paper](http://img.shields.io/badge/paper-biorxiv.2022.01.20.477061.svg)](https://doi.org/10.1101/2022.01.20.477061)
+
+</div>
+
 
 General protein language models have been shown to summarise the semantics of protein sequences into representations that are useful for state-of-the-art predictive methods. However, for antibody specific problems, such as restoring residues lost due to sequencing errors, a model trained solely on antibodies may be more powerful. Language models require vast numbers of sequences for training and antibodies are one of the few protein types for which such volumes of data exist, for example in the Observed Antibody Space (OAS) database. Here, we introduce AbLang, a language model trained on the antibody sequences in the OAS database. We demonstrate the power of AbLang by using it to restore missing residues in antibody sequence data, a key issue with BCR-seq data, as seen with over 40% of OAS sequences missing the first 15 amino acids. AbLang restores the missing residues of antibody sequences better than using IMGT germlines or the general protein language model ESM-1b. Further, AbLang does not require knowledge of the germline of the antibody and is seven times faster than ESM-1b.
 
@@ -65,6 +75,13 @@ array(['EVQLVESGPGLVQPGKSLRLSCVASGFTFSGYGMHWVRQAPGKGLEWIALIIYDESNKYYADSVKGRFTISR
 ```
 -----
 
-# Citing this work
-
-AbLang is based on a paper in preparation.
+### Citation   
+```
+@article{Olsen2022,
+  title={AbLang: An antibody language model for completing antibody sequences},
+  author={Tobias H. Olsen, Iain H. Moal and Charlotte M. Deane},
+  journal={bioRxiv},
+  doi={https://doi.org/10.1101/2022.01.20.477061},
+  year={2022}
+}
+```  
