@@ -5,7 +5,7 @@
  
 # AbLang: A language model for antibodies  
 
-[![Paper](http://img.shields.io/badge/paper-biorxiv.2022.01.20.477061.svg)](https://doi.org/10.1101/2022.01.20.477061)
+[![DOI:10.1101/2022.01.20.477061](http://img.shields.io/badge/DOI-10.1101/2022.01.20.477061-B31B1B.svg)](https://doi.org/10.1101/2022.01.20.477061)
 
 </div>
 
