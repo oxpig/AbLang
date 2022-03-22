@@ -17,8 +17,10 @@ class pretrained:
     Initializes AbLang for heavy or light chains.    
     """
     
-    def __init__(self, chain="heavy", model_folder="download", random_init=False, ncpu=7):
+    def __init__(self, chain="heavy", model_folder="download", random_init=False, ncpu=7, device='cpu'):
         super().__init__()
+        
+        self.used_device = torch.device(device)
         
         if model_folder == "download":
             # Download model and save to specific place - if already downloaded do not download again
@@ -44,9 +46,10 @@ class pretrained:
             self.hparams = argparse.Namespace(**json.load(f))    
 
         self.AbLang = model.AbLang(self.hparams)
+        self.AbLang.to(self.used_device)
         
         if not random_init:
-            self.AbLang.load_state_dict(torch.load(self.model_file, map_location=torch.device('cpu')))
+            self.AbLang.load_state_dict(torch.load(self.model_file, map_location=device))
         
         self.tokenizer = tokenizers.ABtokenizer(os.path.join(model_folder, 'vocab.json'))
         self.AbRep = self.AbLang.AbRep
@@ -121,7 +124,7 @@ class pretrained:
         if align:
             nr_seqs = len(seqs)//self.spread
 
-            tokens = self.tokenizer(seqs, pad=True)
+            tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
             predictions = self.AbLang(tokens)[:,:,1:21]
 
             # Reshape
@@ -130,18 +133,19 @@ class pretrained:
             seqs = seqs.reshape(nr_seqs, -1)
             
             # Find index of best predictions
-            best_seq_idx = torch.argmax(torch.max(predictions, -1).values.mean(2), -1)
+            best_seq_idx = torch.argmax(torch.max(predictions, -1).values[:,:,:10].mean(2), -1)
             
             # Select best predictions           
             tokens = tokens.gather(1, best_seq_idx.view(-1, 1).unsqueeze(1).repeat(1, 1, tokens.shape[-1])).squeeze(1)
             predictions = predictions[range(predictions.shape[0]), best_seq_idx]
+            
             seqs = np.take_along_axis(seqs, best_seq_idx.view(-1, 1).numpy(), axis=1)
 
 
         else:
-            tokens = self.tokenizer(seqs, pad=True)
+            tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
             predictions = self.AbLang(tokens)[:,:,1:21]
-
+            
         predicted_tokens = torch.max(predictions, -1).indices + 1
         restored_tokens = torch.where(tokens==23, predicted_tokens, tokens)
 
