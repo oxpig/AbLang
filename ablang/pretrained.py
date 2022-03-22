@@ -49,7 +49,7 @@ class pretrained:
         self.AbLang.to(self.used_device)
         
         if not random_init:
-            self.AbLang.load_state_dict(torch.load(self.model_file, map_location=device))
+            self.AbLang.load_state_dict(torch.load(self.model_file, map_location=self.used_device))
         
         self.tokenizer = tokenizers.ABtokenizer(os.path.join(model_folder, 'vocab.json'))
         self.AbRep = self.AbLang.AbRep
@@ -99,11 +99,11 @@ class pretrained:
         Sequence specific representations
         """
         
-        tokens = self.tokenizer(seqs, pad=True)
+        tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
 
         residue_states = self.AbRep(tokens).last_hidden_states
         
-        residue_states = residue_states.detach().numpy()
+        if torch.is_tensor(residue_states): residue_states = residue_states.cpu().detach().numpy()
         
         lens = np.vectorize(len)(seqs)
         
@@ -158,11 +158,13 @@ class pretrained:
         Possible Mutations
         """
         
-        tokens = self.tokenizer(seqs, pad=True)
+        tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
         
         predictions = self.AbLang(tokens)[:,:,1:21]
         
-        return predictions.detach().numpy()
+        if torch.is_tensor(predictions): predictions = predictions.cpu().detach().numpy()
+
+        return predictions
     
     def rescoding(self, seqs, align=False):
         """
@@ -179,9 +181,10 @@ class pretrained:
             
             seqs = np.array([''.join([i[1] for i in onarci[0][0]]).replace('-','') for onarci in anarci_out[1]])
             
-            tokens = self.tokenizer(seqs, pad=True)
+            tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
             residue_states = self.AbRep(tokens).last_hidden_states
-            residue_states = residue_states.detach().numpy()
+            
+            if torch.is_tensor(residue_states): residue_states = residue_states.cpu().detach().numpy()
             
             residue_output = np.array([create_alignment(res_embed, oanarci, seq, number_alignment) for res_embed, oanarci, seq in zip(residue_states, anarci_out[1], seqs)])
             del residue_states
@@ -191,10 +194,10 @@ class pretrained:
             
         else:
             
-            tokens = self.tokenizer(seqs, pad=True)
+            tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
             residue_states = self.AbRep(tokens).last_hidden_states
         
-            residue_states = residue_states.detach().numpy()
+            if torch.is_tensor(residue_states): residue_states = residue_states.cpu().detach().numpy()
             
             residue_output = [res_to_list(state, seq) for state, seq in zip(residue_states, seqs)]
 
