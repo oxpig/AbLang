@@ -133,16 +133,16 @@ class pretrained:
             seqs = seqs.reshape(nr_seqs, -1)
             
             # Create mask for seqlikelihood
-            tokenmask = torch.where(tokens==23, 1, 0)
-            cls_tkn = torch.zeros(tokenmask.shape[0], tokenmask.shape[1], 1, device=self.used_device)
-            ext_tkn = torch.ones(tokenmask.shape[0], tokenmask.shape[1], 30, device=self.used_device)
-            tokenmask = torch.cat((cls_tkn, ext_tkn, tokenmask[:,:,1:-30]), -1)
+            #tokenmask = torch.where(tokens==23, 1, 0)
+            #cls_tkn = torch.zeros(tokenmask.shape[0], tokenmask.shape[1], 1, device=self.used_device)
+            #ext_tkn = torch.ones(tokenmask.shape[0], tokenmask.shape[1], 30, device=self.used_device)
+            #tokenmask = torch.cat((cls_tkn, ext_tkn, tokenmask[:,:,1:-30]), -1)
             
-            seqlikelihood = torch.sum(torch.max(predictions, -1).values * tokenmask.float(), 2) / torch.sum(tokenmask, 2)
+            #seqlikelihood = torch.sum(torch.max(predictions, -1).values * tokenmask.float(), 2) / torch.sum(tokenmask, 2)
             
             # Find index of best predictions
-            #best_seq_idx = torch.argmax(torch.max(predictions, -1).values[:,:,1:2].mean(2), -1)
-            best_seq_idx = torch.argmax(seqlikelihood, -1)            
+            best_seq_idx = torch.argmax(torch.max(predictions, -1).values[:,:,1:2].mean(2), -1)
+            #best_seq_idx = torch.argmax(seqlikelihood, -1)            
             
             # Select best predictions           
             tokens = tokens.gather(1, best_seq_idx.view(-1, 1).unsqueeze(1).repeat(1, 1, tokens.shape[-1])).squeeze(1)
