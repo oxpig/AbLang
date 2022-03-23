@@ -125,15 +125,62 @@ class pretrained:
             nr_seqs = len(seqs)//self.spread
 
             tokens = self.tokenizer(seqs, pad=True, device=self.used_device)
+            
+            
+            
             predictions = self.AbLang(tokens)[:,:,1:21]
-                     
+            
+            #print(torch.max(predictions[:,1], -1).values)
+            
+            
             # Reshape
             tokens = tokens.reshape(nr_seqs, self.spread, -1)
+
+
             predictions = predictions.reshape(nr_seqs, self.spread, -1, 20)
             seqs = seqs.reshape(nr_seqs, -1)
             
-            # Find index of best predictions based on the first residue's likelihood
+            
+            #tokenmask = torch.where(tokens==23, 1, 0)#.unsqueeze(-1).repeat(1, 1, 1, 20)
+            tokenmask = torch.where(tokens==23, 1, 0)#.unsqueeze(-1).repeat(1, 1, 1, 20)
+            
+            cls_tkn = torch.zeros(tokenmask.shape[0], tokenmask.shape[1], 1)
+            ext_tkn = torch.ones(tokenmask.shape[0], tokenmask.shape[1], 2)
+            #print(tokenmask.shape)
+            
+            tokenmask = torch.cat((cls_tkn, ext_tkn, tokenmask[:,:,1:-2]), -1)
+                       
+            #print(tokenmask.shape)
+            #print(torch.max(predictions, -1).values)
+            #print(torch.max(predictions, -1).values.shape)
+            #print(seqs[0])
+            #print(tokenmask[0][0])
+            #print(tokenmask * torch.max(predictions, -1).values)
+            
+            #tokenmask = tokenmask * torch.max(predictions, -1).values
+            
+            seqlikelihood = torch.sum(torch.max(predictions, -1).values * tokenmask.float(), 2) / torch.sum(tokenmask, 2)
+            
+            #print(seqlikelihood)
+            #print(torch.nan_to_num(seqlikelihood, nan=))
+            
+            #print((tokenmask * torch.max(predictions, -1)).shape)
+            
+            
+            #print(torch.max(predictions, -1).values[:,:,:90].mean(2))
+            
+            # Find index of best predictions
             best_seq_idx = torch.argmax(torch.max(predictions, -1).values[:,:,1:2].mean(2), -1)
+            
+            
+            
+            
+            
+            #print(tokens)
+            #print(torch.max(predictions, -1).values[:,:,1:2].mean(2))
+            #print(seqs)
+            
+            
             
             # Select best predictions           
             tokens = tokens.gather(1, best_seq_idx.view(-1, 1).unsqueeze(1).repeat(1, 1, tokens.shape[-1])).squeeze(1)
