@@ -133,13 +133,13 @@ class pretrained:
             seqs = seqs.reshape(nr_seqs, -1)
             
             # Find index of best predictions
-            best_seq_idx = torch.argmax(torch.max(predictions, -1).values[:,:,:10].mean(2), -1)
+            best_seq_idx = torch.argmax(torch.max(predictions, -1).values[:,:,:30].mean(2), -1)
             
             # Select best predictions           
             tokens = tokens.gather(1, best_seq_idx.view(-1, 1).unsqueeze(1).repeat(1, 1, tokens.shape[-1])).squeeze(1)
             predictions = predictions[range(predictions.shape[0]), best_seq_idx]
             
-            seqs = np.take_along_axis(seqs, best_seq_idx.view(-1, 1).numpy(), axis=1)
+            seqs = np.take_along_axis(seqs, best_seq_idx.view(-1, 1).cpu().numpy(), axis=1)
 
 
         else:
