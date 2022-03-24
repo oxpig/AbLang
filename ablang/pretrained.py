@@ -217,7 +217,7 @@ class pretrained:
         import pandas as pd
         import anarci
 
-        anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, allowed_species=['human', 'mouse'], scheme='imgt')
+        anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, scheme='imgt') #, allowed_species=['human', 'mouse']
         anarci_data = pd.DataFrame([str(anarci[0][0]) if anarci else 'ANARCI_error' for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
 
         seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
