@@ -20,25 +20,20 @@ jobs:
       - name: Setup Python
         uses: actions/setup-python@v2
         with:
-          python-version: "3.x"
+          python-version: 3.8
 
       - name: Install pipenv
         run: |
-          python -m pip install --upgrade pipenv wheel
-      - id: cache-pipenv
-        uses: actions/cache@v1
-        with:
-          path: ~/.local/share/virtualenvs
-          key: ${{ runner.os }}-pipenv-${{ hashFiles('**/Pipfile.lock') }}
+          python3 -m pip install --upgrade pip
+          python3 -m pip install setuptools wheel twice
+      
 
-      - name: Install dependencies
-        if: steps.cache-pipenv.outputs.cache-hit != 'true'
+      # Upload to TestPyPI
+      - name: Build and Upload to TestPyPI
         run: |
-          pipenv install --python python3.8 --deploy --dev
-      - name: Build a binary wheel and a source tarball
-        run: |
-          pipenv run build
-      - name: Publish distribution 📦 to PyPI
-        uses: pypa/gh-action-pypi-publish@master
-        with:
-          password: ${{ secrets.PYPI_API_TOKEN }}
+          python3 setup.py sdist bdist_wheel
+          python3 -m twine upload dist/*
+        env:
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+          TWINE_REPOSITORY: pypi
