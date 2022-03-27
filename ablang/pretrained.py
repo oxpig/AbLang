@@ -207,7 +207,11 @@ class pretrained:
         import pandas as pd
         import anarci
 
-        anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, scheme='imgt') #, allowed_species=['human', 'mouse']
+        anarci_out = anarci.run_anarci(
+            pd.DataFrame([seq.replace('*', 'X') for seq in seqs]).reset_index().values.tolist(), 
+            ncpu=self.ncpu, 
+            scheme='imgt'
+        ) #, allowed_species=['human', 'mouse']
         anarci_data = pd.DataFrame([str(anarci[0][0]) if anarci else 'ANARCI_error' for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
 
         seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
@@ -343,7 +347,7 @@ def get_sequences_from_anarci(out_anarci, max_position, spread):
     
     sequence = "".join(re.findall(r"(?i)[A-Z*]", "".join(re.findall(r'\),\s\'[A-Z*]', out_anarci))))
 
-    sequence_j = ''.join(sequence).replace('-','') + '*'*(max_position-int(end_position))
+    sequence_j = ''.join(sequence).replace('-','').replace('X','*') + '*'*(max_position-int(end_position))
     
     numba_list = List.empty_list(unicode_type)
 
