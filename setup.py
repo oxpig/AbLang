@@ -17,7 +17,6 @@ setup(
     packages=find_packages(include=('ablang', 'ablang.*')),
     install_requires=[
         'numpy',
-        'numba',
         'requests',
         'fairseq',
         'torch>=1.6',

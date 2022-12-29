@@ -1,10 +1,6 @@
 import os, json, argparse, string, subprocess, re
 from dataclasses import dataclass
 
-from numba import jit
-from numba.typed import Dict, List
-from numba.types import unicode_type, DictType
-
 import numpy as np
 import torch
 import requests
@@ -79,7 +75,7 @@ class pretrained:
         
         
         if align and mode=='restore':
-            sequence = self.sequence_aligning(sequence)
+            # sequence = self.sequence_aligning(sequence)
             splitSize = ((splitSize//self.spread)+1)*self.spread
         
         aList = []
@@ -202,19 +198,19 @@ class pretrained:
 
             return residue_output
         
-    def sequence_aligning(self, seqs):
+    # def sequence_aligning(self, seqs):
         
-        import pandas as pd
-        import anarci
+    #     import pandas as pd
+    #     import anarci
 
-        anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, scheme='imgt') #, allowed_species=['human', 'mouse']
-        anarci_data = pd.DataFrame([str(anarci[0][0]) if anarci else 'ANARCI_error' for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
+    #     anarci_out = anarci.run_anarci(pd.DataFrame(seqs).reset_index().values.tolist(), ncpu=self.ncpu, scheme='imgt') #, allowed_species=['human', 'mouse']
+    #     anarci_data = pd.DataFrame([str(anarci[0][0]) if anarci else 'ANARCI_error' for anarci in anarci_out[1]], columns=['anarci']).astype('<U90')
 
-        seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
-                                                                     self.max_position, 
-                                                                     self.spread), axis=1, result_type='expand').to_numpy().reshape(-1)
+    #     seqs = anarci_data.apply(lambda x: get_sequences_from_anarci(x.anarci, 
+    #                                                                  self.max_position, 
+    #                                                                  self.spread), axis=1, result_type='expand').to_numpy().reshape(-1)
         
-        return seqs
+    #     return seqs
         
         
             
@@ -307,48 +303,48 @@ def create_alignment(res_embeds, oanarci, seq, number_alignment):
 
     return pd.concat([aligned_embeds, sequence_alignment], axis=1).values
 
-def turn_into_numba(anarcis):
-    """
-    Turns the nested anarci dictionary into a numba item, allowing us to use numba on it.
-    """
+# def turn_into_numba(anarcis):
+#     """
+#     Turns the nested anarci dictionary into a numba item, allowing us to use numba on it.
+#     """
     
-    anarci_list = List.empty_list(unicode_type)
-    [anarci_list.append(str(anarci)) for anarci in anarcis]
+#     anarci_list = List.empty_list(unicode_type)
+#     [anarci_list.append(str(anarci)) for anarci in anarcis]
 
-    return anarci_list
+#     return anarci_list
 
-@jit(nopython=True)
-def get_spread_sequences(seq, spread, start_position, numbaList):
-    """
-    Test sequences which are 8 positions shorter (position 10 + max CDR1 gap of 7) up to 2 positions longer (possible insertions).
-    """
+# @jit(nopython=True)
+# def get_spread_sequences(seq, spread, start_position, numbaList):
+#     """
+#     Test sequences which are 8 positions shorter (position 10 + max CDR1 gap of 7) up to 2 positions longer (possible insertions).
+#     """
 
-    for diff in range(start_position-8, start_position+2+1):
-        numbaList.append('*'*diff+seq)
+#     for diff in range(start_position-8, start_position+2+1):
+#         numbaList.append('*'*diff+seq)
     
-    return numbaList
+#     return numbaList
 
-def get_sequences_from_anarci(out_anarci, max_position, spread):
-    """
-    Ensures correct masking on each side of sequence
-    """
+# def get_sequences_from_anarci(out_anarci, max_position, spread):
+#     """
+#     Ensures correct masking on each side of sequence
+#     """
     
-    if out_anarci == 'ANARCI_error':
-        return np.array(['ANARCI-ERR']*spread)
+#     if out_anarci == 'ANARCI_error':
+#         return np.array(['ANARCI-ERR']*spread)
     
-    end_position = int(re.search(r'\d+', out_anarci[::-1]).group()[::-1])
-    # Fixes ANARCI error of poor numbering of the CDR1 region
-    start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+',
-                                   out_anarci).group().split(',')[0]) - 1
+#     end_position = int(re.search(r'\d+', out_anarci[::-1]).group()[::-1])
+#     # Fixes ANARCI error of poor numbering of the CDR1 region
+#     start_position = int(re.search(r'\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+\'\),\s\(\(\d+,\s\'.\'\),\s\'[^-]+',
+#                                    out_anarci).group().split(',')[0]) - 1
     
-    sequence = "".join(re.findall(r"(?i)[A-Z*]", "".join(re.findall(r'\),\s\'[A-Z*]', out_anarci))))
+#     sequence = "".join(re.findall(r"(?i)[A-Z*]", "".join(re.findall(r'\),\s\'[A-Z*]', out_anarci))))
 
-    sequence_j = ''.join(sequence).replace('-','') + '*'*(max_position-int(end_position))
+#     sequence_j = ''.join(sequence).replace('-','') + '*'*(max_position-int(end_position))
     
-    numba_list = List.empty_list(unicode_type)
+#     numba_list = List.empty_list(unicode_type)
 
-    spread_seqs = np.array(get_spread_sequences(sequence_j, spread, start_position, numba_list))
+#     spread_seqs = np.array(get_spread_sequences(sequence_j, spread, start_position, numba_list))
 
-    return spread_seqs
+#     return spread_seqs
 
 
