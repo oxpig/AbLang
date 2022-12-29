@@ -13,14 +13,14 @@ class pretrained:
     Initializes AbLang for heavy or light chains.    
     """
     
-    def __init__(self, chain="heavy", model_folder="download", random_init=False, ncpu=7, device='cpu'):
+    def __init__(self, chain="heavy", download_model = False, model_folder="", random_init=False, ncpu=7, device='cpu'):
         super().__init__()
         
         self.used_device = torch.device(device)
         
-        if model_folder == "download":
+        if download_model:
             # Download model and save to specific place - if already downloaded do not download again
-            model_folder = os.path.join(os.path.dirname(__file__), "model-weights-{}".format(chain))
+            model_folder = model_folder or os.path.join(os.path.dirname(__file__), "model-weights-{}".format(chain))
             os.makedirs(model_folder, exist_ok = True)
             
             if not os.path.isfile(os.path.join(model_folder, "amodel.pt")):
