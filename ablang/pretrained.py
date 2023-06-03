@@ -30,7 +30,7 @@ class pretrained:
             if not os.path.isfile(os.path.join(model_folder, "amodel.pt")):
                 print("Downloading model ...")
                 
-                url = "http://opig.stats.ox.ac.uk/website/data/downloads/ablang-{}.tar.gz".format(chain)
+                url = "https://opig.stats.ox.ac.uk/data/downloads/ablang-{}.tar.gz".format(chain)
                 tmp_file = os.path.join(model_folder, "tmp.tar.gz")
 
                 with open(tmp_file,'wb') as f: f.write(requests.get(url).content)
