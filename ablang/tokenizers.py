@@ -27,8 +27,15 @@ class ABtokenizer():
         self.vocab_to_aa = {v: k for k, v in self.vocab_to_token.items()}
      
     def encode(self, sequence, device='cpu'):
-        
-        encoded = [self.vocab_to_token["<"]]+[self.vocab_to_token[resn] for resn in sequence]+[self.vocab_to_token[">"]]
+        try:
+            encoded = [self.vocab_to_token["<"]]+[self.vocab_to_token[resn] for resn in sequence]+[self.vocab_to_token[">"]]
+        except KeyError as e:
+            
+            wrong_aa = e.args
+            
+            e.args = (f"Following character(s) not accepted in sequences: {wrong_aa}. \
+Please only use amino acids (MRHKDESTNQCGPAVIFYWL) or the mask token (*).",)
+            raise 
         
         return torch.tensor(encoded, dtype=torch.long, device=device)
         # Start and Stop token should probably not be added here, but instead earlier
