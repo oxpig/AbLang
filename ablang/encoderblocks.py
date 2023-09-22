@@ -4,7 +4,8 @@ from dataclasses import dataclass
 
 import torch
 import torch.nn as nn
-from fairseq.modules.multihead_attention import MultiheadAttention
+#from fairseq.modules.multihead_attention import MultiheadAttention
+from .fairseq_mha import MultiheadAttention
 
 from .extra_fns import ACT2FN
 

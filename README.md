@@ -32,6 +32,13 @@ or directly from github.
     pip install -U git+https://github.com/oxpig/AbLang.git
 ~~~
 
+**NB:** If you use the argument "align=True", you need to manually install a version of [ANARCI](https://github.com/oxpig/ANARCI) in the same environment. ANARCI can also be installed using bioconda; however, this version is maintained by a third party.
+
+~~~.sh
+    conda install -c bioconda anarci
+~~~
+
+
 ----------
 
 # AbLang use cases

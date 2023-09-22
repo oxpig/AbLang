@@ -6,7 +6,7 @@ with open("README.md", "r", encoding="utf-8") as fh:
     
 setup(
     name='ablang',
-    version='0.2.3',
+    version='0.2.4',
     description='AbLang: A language model for antibodies.',
     license='BSD 3-clause license',
     maintainer='Tobias Hegelund Olsen',
@@ -17,9 +17,9 @@ setup(
     packages=find_packages(include=('ablang', 'ablang.*')),
     install_requires=[
         'requests',
-        'fairseq',
         'torch>=1.6',
         'numpy',
+        'pandas',
         'numba',
     ],
 )
