@@ -5,14 +5,16 @@
  
 # AbLang: A language model for antibodies  
 
-[![DOI:10.1101/2022.01.20.477061](http://img.shields.io/badge/DOI-10.1101/2022.01.20.477061-B31B1B.svg)](https://doi.org/10.1101/2022.01.20.477061)
+[![DOI:10.1101/2022.01.20.477061](http://img.shields.io/badge/DOI-10.1101/2022.01.20.477061-B31B1B.svg)](https://doi.org/10.1093/bioadv/vbac046)
 
 </div>
 
 
-**Motivation:** General protein language models have been shown to summarise the semantics of protein sequences into representations that are useful for state-of-the-art predictive methods. However, for antibody specific problems, such as restoring residues lost due to sequencing errors, a model trained solely on antibodies may be more powerful. Antibodies are one of the few protein types where the volume of sequence data needed for such language models is available, for example in the Observed Antibody Space (OAS) database. 
+**Motivation:** General protein language models have been shown to summarize the semantics of protein sequences into representations that are useful for state-of-the-art predictive methods. However, for antibody specific problems, such as restoring residues lost due to sequencing errors, a model trained solely on antibodies may be more powerful. Antibodies are one of the few protein types where the volume of sequence data needed for such language models is available, e.g. in the Observed Antibody Space (OAS) database.
 
-**Results:** Here, we introduce AbLang, a language model trained on the antibody sequences in the OAS database. We demonstrate the power of AbLang by using it to restore missing residues in antibody sequence data, a key issue with B-cell receptor repertoire sequencing, for example over 40% of OAS sequences are missing the first 15 amino acids. AbLang restores the missing residues of antibody sequences better than using IMGT germlines or the general protein language model ESM-1b. Further, AbLang does not require knowledge of the germline of the antibody and is seven times faster than ESM-1b.
+**Results:** Here, we introduce AbLang, a language model trained on the antibody sequences in the OAS database. We demonstrate the power of AbLang by using it to restore missing residues in antibody sequence data, a key issue with B-cell receptor repertoire sequencing, e.g. over 40% of OAS sequences are missing the first 15 amino acids. AbLang restores the missing residues of antibody sequences better than using IMGT germlines or the general protein language model ESM-1b. Further, AbLang does not require knowledge of the germline of the antibody and is seven times faster than ESM-1b.
+
+**Availability and implementation:** AbLang is a python package available at https://github.com/oxpig/AbLang.
 
 -----------
 
@@ -34,7 +36,7 @@ or directly from github.
 
 # AbLang use cases
 
-**A Jupyter notebook** showing the different use cases of AbLang can be found [here](https://github.com/TobiasHeOl/AbLang/tree/main/examples). 
+**A Jupyter notebook** showing the different use cases of AbLang and its building blocks can be found [here](https://github.com/TobiasHeOl/AbLang/tree/main/examples). 
 
 
 Currently, AbLang can be used to generate three different representations/encodings for antibody sequences. 
@@ -43,7 +45,7 @@ Currently, AbLang can be used to generate three different representations/encodi
 
 2. **Seq-codings:** These encodings are 768 values for each sequence, useful for sequence specific predictions. The same length of encodings for each sequence, means these encodings also removes the need to align antibody sequences.
 
-3. **Res-likelihoods:** These encodings are the likelihoods of each amino acid at each position in a given antibody sequence, useful for exploring possible mutations.
+3. **Res-likelihoods:** These encodings are the likelihoods of each amino acid at each position in a given antibody sequence, useful for exploring possible mutations. The order of amino acids follows the ablang vocabulary.
 
 These representations can be used for a plethora of antibody design applications. As an example, we have used the res-likelihoods from AbLang to restore missing residues in antibody sequences due either to sequencing errors, such as ambiguous bases, or the limitations of the sequencing techniques used.
 
