@@ -49,7 +49,7 @@ class pretrained:
         self.AbLang.to(self.used_device)
         
         if not random_init:
-            self.AbLang.load_state_dict(torch.load(self.model_file, map_location=self.used_device))
+            self.AbLang.load_state_dict(torch.load(self.model_file, map_location=self.used_device, weights_only=True))
         
         self.tokenizer = tokenizers.ABtokenizer(os.path.join(model_folder, 'vocab.json'))
         self.AbRep = self.AbLang.AbRep

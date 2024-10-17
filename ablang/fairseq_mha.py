@@ -750,7 +750,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
             # treats bias in linear module as method.
             and not torch.jit.is_scripting()
             # The Multihead attention implemented in pytorch forces strong dimension check
-            # for input embedding dimention and K,Q,V projection dimension.
+            # for input embedding dimension and K,Q,V projection dimension.
             # Since pruning will break the dimension check and it is not easy to modify the pytorch API,
             # it is preferred to bypass the pytorch MHA when we need to skip embed_dim_check
             and not self.skip_embed_dim_check
@@ -1082,7 +1082,7 @@ class MultiheadAttention(FairseqIncrementalDecoder):
         return incremental_state
 
     def set_beam_size(self, beam_size):
-        """Used for effiecient beamable enc-dec attention"""
+        """Used for efficient beamable enc-dec attention"""
         self.beam_size = beam_size
 
     def _get_input_buffer(
