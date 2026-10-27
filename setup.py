@@ -15,6 +15,9 @@ setup(
     maintainer_email='tobias.olsen@stats.ox.ac.uk',
     include_package_data=True,
     packages=find_packages(include=('ablang', 'ablang.*')),
+    # ANARCI is needed at runtime for `align=True`, but it is deliberately
+    # absent here.  The `anarci` package on PyPI is not an official release,
+    # so ANARCI must come from Bioconda (`bioconda::anarci`).
     install_requires=[
         'requests',
         'torch>=1.6',
@@ -22,4 +25,7 @@ setup(
         'pandas',
         'numba',
     ],
+    entry_points={
+        'console_scripts': ['ablang=ablang.cli:main'],
+    },
 )
